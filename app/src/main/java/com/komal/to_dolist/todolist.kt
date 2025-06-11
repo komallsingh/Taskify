@@ -219,7 +219,7 @@ fun ToDoList() {
                     ) {
                         Text(
                             text = if (editid != null) {
-                                "Save Changes"
+                                "SAVE CHANGES"
                             } else {
                                 "ADD"
                             }
