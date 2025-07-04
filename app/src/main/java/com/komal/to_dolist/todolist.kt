@@ -1,284 +1,179 @@
 package com.komal.to_dolist
 
-import android.app.AlertDialog
-import android.graphics.drawable.shapes.OvalShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditCalendar
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.modifier.modifierLocalMapOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.komal.to_dolist.model.TaskEntity
 import kotlinx.coroutines.delay
 
-data class Task(
-    val id: Int,  //UNIQUE ID
-    var name: String,  //TASK NAME
-    var tduration: Int,
-    var isEditing: Boolean = false,
-    var isDone: Boolean = false
-)
-
 @Composable
-fun ToDoList() {
-    var doTask by remember { mutableStateOf(listOf<Task>()) }  //LIST OF ALL TASK
-    var showDialogue by remember { mutableStateOf(false) }  //ADD OR EDIT CONTROL
-    var taskname by remember { mutableStateOf("") }
+fun ToDoListScreen(viewModel: TaskViewModel = viewModel()) {
+    var showDialog by remember { mutableStateOf(false) }
+    var taskName by remember { mutableStateOf("") }
     var duration by remember { mutableStateOf("") }
-    var showCongrats by remember { mutableStateOf<String?>(null) }
-    var showCongratsForTask by remember { mutableStateOf<Int?>(null) } //STORE ID OF LAST DONE TASK SO POPUP ONCE
-    var editid by remember { mutableStateOf<Int?>(null) } //ID OF TASK WANT TO EDIT
+    var editTaskId by remember { mutableStateOf<Int?>(null) }
+
+    val tasks by viewModel.tasks.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Button(
             onClick = {
-                showDialogue = true
-                editid = null //NEW TASK FOR START
-                taskname = ""
+                showDialog = true
+                editTaskId = null
+                taskName = ""
                 duration = ""
             },
-            modifier = Modifier
-                .padding(10.dp)
-                .align(Alignment.CenterHorizontally).offset(y=20.dp)
-
+            modifier = Modifier.padding(10.dp).offset(y=20.dp)
         ) {
             Text("Add Task")
         }
-        LazyColumn(  //TO DISPLAY SCROLLABLE LIST OF TASK
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(top = 16.dp)
         ) {
-            items(doTask) { task ->
-                toDOListItems(
-                    item = task,
-                    onEditClick = {
-                        taskname = task.name
-                        duration = task.tduration.toString()
-                        editid = task.id
-                        showDialogue = true
-                    }, onDeleteClick = {
-                        doTask = doTask.filter { it.id != task.id }
-                    },
+            items(tasks) { task ->
+                TaskItem(
+                    task = task,
                     onCheckedChange = { isChecked ->
-                        doTask = doTask.map {
-                            if (it.id == task.id) {
-                                it.copy(isDone = isChecked)
-                            } else {
-                                it
-                            }
-                        }
-                        if (isChecked && showCongratsForTask != task.id) {
-                            showCongrats = task.name
-                            showCongratsForTask = task.id
-                        }
+                        viewModel.updateTask(task.copy(isDone = isChecked))
+                    },
+                    onEditClick = {
+                        taskName = task.name
+                        duration = task.tduration.toString()
+                        editTaskId = task.id
+                        showDialog = true
+                    },
+                    onDeleteClick = {
+                        viewModel.deleteTask(task)
                     }
                 )
-
-                //toDOListItems(it,{},{}) //DISPLAY THE TASK
             }
         }
-        if (showCongrats != null && showCongratsForTask != null) {
+
+        if (showDialog) {
             AlertDialog(
-                onDismissRequest = { showCongrats = null },
-                title = { Text("Yayyy! \uD83D\uDE03", fontWeight = FontWeight.Bold) },
-                text = { Text("Task Completed: $showCongrats \n" +
-                        "\uD83D\uDC4D ") },
-                confirmButton = {}
-            )
-        }
-        LaunchedEffect(showCongrats) {
-            delay(2000)
-            showCongrats = null
-            showCongratsForTask = null
-        }
-
-
-    }
-    if (showDialogue) {
-        AlertDialog(
-            onDismissRequest = { showDialogue = false },
-            title = {
-                Text(
-                    "TASK ON!",
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = taskname,
-                        onValueChange = { taskname = it }, //default string
-                        singleLine = true,
-                        label = { Text("Enter the Task") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.EditCalendar,
-                                contentDescription = "Edit Task"
-                            ) //TO IMPORT ICON ADDED TWO DEPENDENCIES IN BUILD GRADLE AND IMPORTED DEFAULT
-                            //ICONS PRESENT
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
+                onDismissRequest = { showDialog = false },
+                title = {
+                    Text(
+                        text = if (editTaskId != null) "Edit Task" else "Add Task",
+                        fontWeight = FontWeight.Bold
                     )
-                    OutlinedTextField(
-                        value = duration,
-                        onValueChange = { duration = it }, //default string
-                        singleLine = true,
-                        label = { Text("Enter Duration") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.HourglassEmpty,
-                                contentDescription = "Duration"
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    )
-                }
-            },
-            confirmButton = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Button(onClick = {
-                        if (taskname.isNotBlank()) {
-                            if (editid != null) {
-                                doTask = doTask.map {
-                                    if (it.id == editid) {
-                                        it.copy(
-                                            name = taskname,
-                                            tduration = duration.toIntOrNull() ?: 0
-                                        )
-                                    } else {
-                                        it
-                                    }
-                                }
-                            } else{
-                                    val newTask = Task(  //ADDING NEW TASK IN NEW LIST WITH NEW+OLD ITEMS
-                                        id = doTask.size + 1,
-                                        name = taskname,
-                                        tduration = duration.toIntOrNull() ?: 0
-                                    )
-                                    doTask = doTask + newTask
-                                }
-
-                            showDialogue = false
-                            taskname = ""
-                            duration = ""
-                            editid = null
-                        }
-                    }
-                    ) {
-                        Text(
-                            text = if (editid != null) {
-                                "SAVE CHANGES"
-                            } else {
-                                "ADD"
-                            }
+                },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = taskName,
+                            onValueChange = { taskName = it },
+                            label = { Text("Task Name") },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(imageVector = Icons.Default.EditCalendar, contentDescription = null)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = duration,
+                            onValueChange = { duration = it },
+                            label = { Text("Duration (min)") },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(imageVector = Icons.Default.HourglassEmpty, contentDescription = null)
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val tdurationInt = duration.toIntOrNull() ?: 0
+                            if (taskName.isNotBlank()) {
+                                if (editTaskId != null) {
+                                    viewModel.updateTask(
+                                        TaskEntity(editTaskId!!, taskName, tdurationInt, false)
+                                    )
+                                } else {
+                                    viewModel.addTask(taskName, tdurationInt)
 
-            }
-        )
+                                }
+                                showDialog = false
+                                taskName = ""
+                                duration = ""
+                                editTaskId = null
+                            }
+                        }
+                    ) {
+                        Text(text = if (editTaskId != null) "Save" else "Add")
+                    }
+                }
+            )
+        }
     }
 }
 
 @Composable
-fun toDOListItems(
-    item: Task,
-    onEditClick: () -> Unit, //LAMBDA FUNCTION //creating our own onclick
-    onDeleteClick: () -> Unit,
-    onCheckedChange: (Boolean) -> Unit //FOR CHECKBOX
+fun TaskItem(
+    task: TaskEntity,
+    onCheckedChange: (Boolean) -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
-            .padding(10.dp)
+            .padding(vertical = 6.dp)
             .fillMaxWidth()
-            .border(
-                border = BorderStroke(4.dp, Color.DarkGray), shape = RoundedCornerShape(30)
-            )
-            .padding(10.dp),
+            .border(BorderStroke(2.dp, Color.Gray), shape = RoundedCornerShape(12.dp))
+            .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
-    ) {//not closed
-        Checkbox(checked = item.isDone,
-            onCheckedChange = { isChecked -> onCheckedChange(isChecked) }
+    ) {
+        Checkbox(
+            checked = task.isDone,
+            onCheckedChange = onCheckedChange
         )
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
             Text(
-                text = item.name, modifier = Modifier.padding(8.dp),
-                style = if (item.isDone) {
-                    TextStyle(
-                        textDecoration = TextDecoration.LineThrough, fontSize = 20.sp
-                    )
-
-                } else {
-                    TextStyle(fontSize = 24.sp)
-                    LocalTextStyle.current
-                }
+                text = task.name,
+                style = TextStyle(
+                    textDecoration = if (task.isDone) TextDecoration.LineThrough else null,
+                    fontSize = 18.sp
+                )
             )
-            Text(text = "${item.tduration} min", modifier = Modifier.padding(8.dp))
+            Text(text = "${task.tduration} min", fontSize = 14.sp, color = Color.Gray)
         }
-
-
-
-
-
-        Row(modifier = Modifier.padding(10.dp)) {
+        Row {
             IconButton(onClick = onEditClick) {
-                Icon(imageVector = Icons.Default.Edit, contentDescription = null)
+                Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
             }
             IconButton(onClick = onDeleteClick) {
-                Icon(imageVector = Icons.Default.Delete, contentDescription = null)
+                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
             }
         }
     }

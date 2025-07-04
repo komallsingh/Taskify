@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.komal.to_dolist.ui.theme.ToDoListTheme
 
 class MainActivity : ComponentActivity() {
@@ -33,7 +34,9 @@ class MainActivity : ComponentActivity() {
             ToDoListTheme {
                 Scaffold(modifier = Modifier.fillMaxSize())
                 { innerPadding ->
-                    ToDoList()
+                    ToDoListScreen(
+                        viewModel = viewModel()
+                    )
 
                 }
             }
